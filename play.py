@@ -45,20 +45,22 @@ def salt_password(password, old_salt = None):
 
 def random_story(story_data):
     # random setting
-    # settings = list(story_data["settings"])
-    # n_settings = len(settings)
-    # rand_n = random.randint(0, n_settings - 1)
-    # setting_key = settings[rand_n]
-
-    # temporarily only available in fantasy
-    setting_key = "fantasy"
+    settings = story_data["settings"].keys()
+    n_settings = len(settings)
+    n_settings = 2
+    rand_n = random.randint(0, n_settings - 1)
+    for i, setting in enumerate(settings):
+        if i == rand_n:
+            setting_key = setting
 
     # random character
-    characters = list(story_data["settings"][setting_key]["characters"])
+    characters = story_data["settings"][setting_key]["characters"]
     n_characters = len(characters)
     rand_n = random.randint(0, n_characters - 1)
-    character_key = characters[rand_n]
-
+    for i, character in enumerate(characters):
+        if i == rand_n:
+            character_key = character
+    
     # random name
     name = grammars.direct(setting_key, "fantasy_name")
 
