@@ -60,9 +60,9 @@ def random_story(story_data):
     for i, character in enumerate(characters):
         if i == rand_n:
             character_key = character
-    
+
     # random name
-    name = grammars.direct(setting_key, "fantasy_name")
+    name = grammars.direct(setting_key, "character_name")
 
     return setting_key, character_key, name
 
