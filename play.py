@@ -15,6 +15,8 @@ from cryptography.hazmat.backends import default_backend
 import base64
 import getpass
 
+from banners.bannerRan import *
+
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 
@@ -197,8 +199,7 @@ def instructions():
     text += '\n                    (higher temperature = less focused). Default is 0.4.'
     text += '\n  "/top ##"         Changes the AI\'s top_p. Default is 0.9.'
     text += '\n  "/remember XXX"   Commit something important to the AI\'s memory for that session.'
-    text += '\n  "/context"        Rewrites everything your AI has currently committed to memory.'
-    text += '\n  "/editcontext     Lets you rewrite specific parts of the context.'
+    text += '\n  "/context"        Edit what your AI has currently committed to memory.'
     return text
 
 
@@ -217,7 +218,10 @@ def play_aidungeon_2():
     story_manager = UnconstrainedStoryManager(generator, upload_story=upload_story, cloud=False)
     print("\n")
 
-    with open("opening.txt", "r", encoding="utf-8") as file:
+    ranBanner =  bannerRan()
+    openingPass = (ranBanner.banner_number)
+        
+    with open(openingPass, "r", encoding="utf-8") as file:
         starter = file.read()
     print(starter)
 
@@ -283,6 +287,7 @@ def play_aidungeon_2():
                 args = split[1:]
                 if command == "reset":
                     story_manager.story.get_rating()
+                    story_manager.print_save()
                     break
 
                 elif command == "restart":
@@ -439,17 +444,6 @@ def play_aidungeon_2():
                         console_print(story_manager.story.story_start)
                     continue
 
-                elif command == "alter": 
-                    if len(story_manager.story.results) is 0: 
-                        console_print("There's no results to alter.\n") 
-                        continue 
-     
-                    console_print("\nThe AI thinks this was what happened:\n") 
-                    print(story_manager.story.results[-1]) 
-                    result = input("\nWhat actually happened was (use \\n for new line):\n\n") 
-                    result = result.replace("\\n", "\n") 
-                    story_manager.story.results[-1] = result 
-
                 elif command == "infto":
 
                     if len(args) != 1:
@@ -522,60 +516,36 @@ def play_aidungeon_2():
 
                     continue
 
-                elif command == "context":
-                    console_print("Current story context: \n" + story_manager.get_context() + "\n")
-                    new_context = input("Enter a new context describing the general status of your character and story: ")
-                    story_manager.set_context(new_context)
-                    console_print("Story context updated.\n")
-
-                elif command == 'editcontext':
+                elif command == 'context':
                     try:
                         current_context = story_manager.get_context()
-                        current_context = current_context.strip()
-                        context_list = current_context.split(".")
-
-                        if context_list[-1] == "":
-                            del context_list[-1]
-
-                        for i in range(len(context_list)):
-                            context_list[i] = context_list[i].strip()
-
-                        console_print("Current story context:\n" + current_context + "\n")
-                        console_print("0) Remove a sentence\n1) Edit a sentence\n2) Add a new sentence\n3) Cancel\n")
-                        choice = get_num_options(4)
-
-                        if choice == 0:
-                            console_print("Pick a sentence to remove:\n")
-                            for i in range(len(context_list)):
-                                console_print(str(i) + ") " + context_list[i])
-                            choice = get_num_options(len(context_list))
-                            del context_list[choice]
-                        elif choice == 1:
-                            console_print("Pick a sentence to edit:\n")
-                            for i in range(len(context_list)):
-                                console_print(str(i) + ") " + context_list[i])
-                            choice = get_num_options(len(context_list))
-                            console_print(context_list[choice])
-                            context_list[choice] = input("\nWrite the new sentence:\n")
-                        elif choice == 2:
-                            context_list.append(input("Write a new sentence:\n"))
+                        console_print("Current story context: \n")
+                        new_context = string_edit(current_context)
+                        if new_context is None:
+                            pass
                         else:
-                            console_print("Cancelled.\n")
-                            continue
+                            story_manager.set_context(new_context)
+                            console_print("Story context updated.\n")
+                    except:
+                        console_print("Something went wrong, cancelling.")
+                        pass
 
-                        current_context = ""
-                        for i in range(len(context_list)):
-                            if context_list[i] == "":
-                                continue
-                            if context_list[i][-1] == ".":
-                                context_list[i] = context_list[i] + " "
-                            elif context_list[i][-1] != " ":
-                                context_list[i] = context_list[i] + ". "
-                            current_context = current_context + context_list[i]
-                        current_context = current_context.strip()
-                        story_manager.set_context(current_context)
-                        console_print("Story context updated.\n")
-
+                elif command == 'alter':
+                    try:
+                        console_print("\nThe AI thinks this was what happened:\n")
+                        try:
+                            current_result = story_manager.story.results[-1]
+                        except IndexError:
+                            current_result = story_manager.story.story_start
+                        new_result = string_edit(current_result)
+                        if new_result is None:
+                            pass
+                        else:
+                            try:
+                                story_manager.story.results[-1] = new_result
+                            except IndexError:
+                                story_manager.story.story_start = new_result
+                            console_print("Result updated.\n")
                     except:
                         console_print("Something went wrong, cancelling.")
                         pass
@@ -630,11 +600,22 @@ def play_aidungeon_2():
 
                 if player_won(result):
                     console_print(result + "\n CONGRATS YOU WIN")
-                    story_manager.story.get_rating()
-                    break
+                    console_print("\nOptions:")
+                    console_print("0) Start a new game")
+                    console_print(
+                        "1) \"I'm not done yet!\" (If you didn't actually win) "
+                    )
+                    console_print("Which do you choose? ")
+                    choice = get_num_options(2)
+                    if choice == 0:
+                        story_manager.story.get_rating()
+                        break
+                    else:
+                        console_print("Sorry about that...where were we?")
+                        console_print(result)
+
                 elif player_died(result):
-                    console_print(result)
-                    console_print("YOU DIED. GAME OVER")
+                    console_print(result + "\n YOU DIED. GAME OVER")
                     console_print("\nOptions:")
                     console_print("0) Start a new game")
                     console_print(
